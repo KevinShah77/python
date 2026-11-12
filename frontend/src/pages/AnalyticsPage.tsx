@@ -1,0 +1,29 @@
+import { useMemo } from 'react';
+import { Lightbulb, Sparkles } from 'lucide-react';
+import type { AppData } from '../types';
+import { budgetStatus, formatMoney, formatPeriod, getAverageStats, getCategoryBreakdown, getDailyTrend, getInsights, getMonthlyTrend, getSummary, createBudgetRows } from '../utils';
+import { BudgetComparison, CategoryDonut, DailySpendingChart, IncomeExpenseLine } from '../components/Charts';
+import { EmptyState, PageTitle, Panel, ProgressBar, StatusPill } from '../components/ui';
+
+export default function AnalyticsPage({ data, period }: { data: AppData; period: string }) {
+  const summary = getSummary(data, period);
+  const averages = getAverageStats(data, period);
+  const breakdown = getCategoryBreakdown(data, period);
+  const insights = getInsights(data, period);
+  const trend = useMemo(() => getMonthlyTrend(data, period, 6), [data, period]);
+  const daily = useMemo(() => getDailyTrend(data, period), [data, period]);
+  const budgetRows = useMemo(() => createBudgetRows(data, period), [data, period]);
+  const overall = data.budgets.find((item) => item.period === period && item.category === 'Overall');
+  const savingsHealth = overall ? budgetStatus(summary.expenseTotal, overall.amount) : null;
+
+  return <div className="page-stack">
+    <PageTitle eyebrow="SEE THE BIGGER PICTURE" title="Analytics" description={`Patterns, pacing, and little money wins · ${formatPeriod(period)}`} />
+    <div className="analytics-stat-grid"><article className="analytics-stat"><span>Average daily spend</span><strong>{formatMoney(averages.daily)}</strong><small>Based on this month’s elapsed days</small><i className="stat-orb stat-orb-blue">↗</i></article><article className="analytics-stat"><span>Average per expense</span><strong>{formatMoney(averages.perTransaction)}</strong><small>{averages.count} expenses this period</small><i className="stat-orb stat-orb-gold">◌</i></article><article className="analytics-stat"><span>Historical monthly average</span><strong>{formatMoney(averages.monthly)}</strong><small>Across {new Set(data.expenses.map((item) => item.date.slice(0, 7))).size} recorded months</small><i className="stat-orb stat-orb-green">⌁</i></article><article className={`analytics-stat ${summary.balance < 0 ? 'analytics-stat-negative' : ''}`}><span>Savings rate</span><strong>{summary.incomeTotal > 0 ? `${summary.savingsRate.toFixed(1)}%` : '—'}</strong><small>{summary.balance < 0 ? `${formatMoney(Math.abs(summary.balance))} deficit` : `${formatMoney(summary.balance)} net balance`}</small><i className="stat-orb stat-orb-violet">{summary.balance < 0 ? '!' : '✦'}</i></article></div>
+    <Panel title="Income and expenses" description="Monthly inflow, outflow, and what remains" className="analytics-chart-panel"><IncomeExpenseLine data={trend} /></Panel>
+    <div className="analytics-chart-grid"><Panel title="Daily spending" description="Daily spend or cumulative month-to-date" className="analytics-chart-panel"><DailySpendingChart data={daily} /></Panel><Panel title="Category mix" description="Your largest expense areas this month" className="analytics-chart-panel">{breakdown.length ? <CategoryDonut data={breakdown} /> : <EmptyState title="No spending to break down" detail="Add an expense and your category mix will appear." />}</Panel></div>
+    <Panel title="Budget versus actual" description="Compare each category limit with its recorded spending" className="analytics-chart-panel"><BudgetComparison data={budgetRows} /></Panel>
+    <div className="analytics-bottom-grid"><Panel title="Savings health" description="Income minus expenses, for the selected month"><div className="savings-health-content"><div className="savings-gauge" style={{ '--savings-progress': `${Math.max(Math.min(summary.savingsRate, 100), 0)}%` } as React.CSSProperties}><div><strong>{summary.incomeTotal > 0 ? `${Math.max(summary.savingsRate, 0).toFixed(0)}%` : '—'}</strong><span>retained</span></div></div><div className="savings-health-copy"><StatusPill tier={summary.balance < 0 ? 'exceeded' : summary.savingsRate >= 20 ? 'normal' : 'caution'}>{summary.balance < 0 ? 'Deficit' : summary.savingsRate >= 20 ? 'Healthy buffer' : 'Room to grow'}</StatusPill><strong>{summary.balance < 0 ? `You’re ${formatMoney(Math.abs(summary.balance))} above income` : `${formatMoney(summary.balance)} remains`}</strong><p>{summary.incomeTotal > 0 ? `From ${formatMoney(summary.incomeTotal)} in recorded income this month.` : 'Add an income entry to see your savings rate.'}</p><div className="savings-benchmark"><span>20% healthy savings benchmark</span><ProgressBar value={Math.max(Math.min(summary.savingsRate / 20 * 100, 100), 0)} tier={summary.savingsRate >= 20 ? 'normal' : 'caution'} /></div></div></div></Panel>
+      <Panel title="Smart spending insights" description="A few useful observations from your activity" action={<span className="insight-count"><Sparkles size={13} /> {insights.length} insights</span>}><div className="insights-list">{insights.map((insight, index) => <article className={`insight-card insight-card-${insight.kind}`} key={`${insight.title}-${index}`}><span className="insight-card-icon">{insight.icon}</span><div><span className="insight-label">{insight.kind === 'positive' ? 'GOOD MOMENTUM' : insight.kind === 'warning' ? 'KEEP AN EYE ON' : 'A HELPFUL NOTE'}</span><strong>{insight.title}</strong><p>{insight.detail}</p><small>{insight.tip}</small></div></article>)}{insights.length === 0 && <EmptyState icon={<Lightbulb size={21} />} title="No insights to show" detail="Once transactions are recorded, thoughtful patterns will appear here." />}</div></Panel></div>
+    {savingsHealth?.tier === 'exceeded' && <div className="alert-strip"><div className="alert-symbol">!</div><div><strong>Budget exceeds plan</strong><p>{savingsHealth.message}</p></div></div>}
+  </div>;
+}

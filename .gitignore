@@ -1,0 +1,29 @@
+# Python byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.pytest_cache/
+
+# Environments
+env/
+venv/
+.venv/
+ENV/
+
+# Streamlit config
+.streamlit/secrets.toml
+
+# Node & Frontend dependencies
+node_modules/
+frontend/node_modules/
+frontend/**/node_modules/
+.npm/
+
+# SQLite local testing DB (keep schema in code)
+# Note: Sample data loader regenerates instantly
+*.db-journal
+
+# Archives
+*.zip
+
