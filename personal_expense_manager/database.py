@@ -12,12 +12,24 @@ Academic Demonstration Concepts:
 
 import os
 import sqlite3
+import shutil
+import tempfile
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Tuple
 
 # Default database path inside data/ directory
 DEFAULT_DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DEFAULT_DB_PATH = os.path.join(DEFAULT_DB_DIR, "expenses.db")
+
+# Vercel Serverless environment support: read-only root filesystem fallback to /tmp
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    VERCEL_DB = os.path.join(tempfile.gettempdir(), "expenses.db")
+    if not os.path.exists(VERCEL_DB) and os.path.exists(DEFAULT_DB_PATH):
+        try:
+            shutil.copy2(DEFAULT_DB_PATH, VERCEL_DB)
+        except Exception:
+            pass
+    DEFAULT_DB_PATH = VERCEL_DB
 
 
 def get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:

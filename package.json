@@ -1,0 +1,9 @@
+{
+  "name": "spendwise-personal-finance",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Personal Expenses & Smart Budget Management System",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
